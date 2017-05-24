@@ -6,7 +6,17 @@ var concat = require('gulp-concat');
 var browserify = require('browserify');
 var source = require('vinyl-source-stream');
 var uglify = require('gulp-uglify');
-var lib = require('bower-files')()
+var lib = require('bower-files')({
+  "overrides": {
+    "bootstrap": {
+      "main": [
+        "less/bootstrap.less",
+        "dist/css/bootstrap.css",
+        "dist/js/bootstrap.js"
+      ]
+    }
+  }
+});
 var buildProduction = utilities.env.production;
 gulp.task('bowerJS', function() {
   return gulp.src(lib.ext('js').files)
@@ -14,6 +24,12 @@ gulp.task('bowerJS', function() {
     .pipe(uglify())
     .pipe(gulp.dest('./build/js'));
 });
+gulp.task('bowerCSS', function() {
+  return gulp.src(lib.ext('css').files)
+    .pipe(concat('vendor.css'))
+    .pipe(gulp.dest('./build/css'));
+});
+gulp.task('bower', ['bowerJS', 'bowerCSS']);
 gulp.task('concatInterface', function() {
   return gulp.src(['./js/*-interface.js'])
     .pipe(concat('allConcat.js'))
@@ -27,11 +43,13 @@ gulp.task('jsBrowserify', ['concatInterface'], function() {
     .pipe(source('app.js'))
     .pipe(gulp.dest('./build/js'));
 });
+
 gulp.task("minifyScripts", ["jsBrowserify"], function() {
   return gulp.src("./build/js/app.js")
     .pipe(uglify())
     .pipe(gulp.dest("./build/js"));
 });
+
 gulp.task("clean", function() {
   return del(['build', 'tmp']);
 });
@@ -41,6 +59,14 @@ gulp.task("build", ['clean'], function() {
   } else {
     gulp.start('jsBrowserify');
   }
+});
+gulp.task('build', ['clean'], function() {
+  if (buildProduction) {
+    gulp.start('minifyScripts');
+  } else {
+    gulp.start('jsBrowserify');
+  }
+  gulp.start('bower');
 });
 gulp.task('jshint', function() {
   return gulp.src(['js/*.js'])
